@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Encontre as figuras iguais</title>
+<style>
+  :root{
+    --bg:#1d2b3a; --panel:#fff7e6; --ink:#1d2b3a; --ok:#2f9e6e; --err:#d9453b;
+  }
+  @media (prefers-color-scheme: dark){ :root{ --bg:#101a24; } }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{
+    background:var(--bg); color:#fff7e6;
+    font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  main{width:100%; max-width:460px; text-align:center}
+  h1{font-size:1.6rem; margin:0 0 6px}
+  p.sub{margin:0 0 24px; opacity:.85}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .card{
+    aspect-ratio:1; border:4px solid transparent; border-radius:18px;
+    background:var(--panel); cursor:pointer; padding:0;
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .15s, border-color .15s, background .15s;
+  }
+  .card svg{width:62%; height:62%}
+  .card:hover{transform:scale(1.04)}
+  .card:focus-visible{outline:3px solid #ffc857; outline-offset:3px}
+  .card.sel{border-color:#ffc857; transform:scale(1.04)}
+  .card.ok{border-color:var(--ok); background:#e3f6ec}
+  .card.err{border-color:var(--err); animation:shake .35s}
+  @keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+  @media (prefers-reduced-motion: reduce){ .card, .card.err{transition:none; animation:none} }
+  #msg{min-height:1.6em; margin-top:22px; font-weight:bold}
+</style>
+
+<script>
+    // Captura e persiste UTMs / tracking params
+    (function() {
+      var u = new URLSearchParams(window.location.search);
+      var KEYS = [
+        'utm_source','utm_medium','utm_campaign','utm_content','utm_term','utm_id',
+        'fbclid','ttclid','gclid','_fbp',
+        'tsclid',
+        'click_id','kwai_click_id','kwclid','callback',
+        'src','sck','xcod','cv','shk','ph','_bp','_sp',
+        'salesCode','codigo_de_vendas'
+      ];
+      var captured = {};
+      KEYS.forEach(function(k){ var v = u.get(k); if (v) captured[k] = v; });
+      try {
+        var saved = JSON.parse(sessionStorage.getItem('shark_utms') || '{}');
+        Object.keys(captured).forEach(function(k){ saved[k] = captured[k]; });
+        sessionStorage.setItem('shark_utms', JSON.stringify(saved));
+        captured = saved;
+      } catch(e) {}
+      function buildLink(originalHref) {
+        var url = new URL(originalHref, location.origin);
+        Object.keys(captured).forEach(function(k){
+          if (!url.searchParams.has(k)) url.searchParams.set(k, captured[k]);
+        });
+        return url.toString();
+      }
+      function attach() {
+        document.querySelectorAll('a.button, a.cta, a[href*="/l/"], a[href*="/c/"], a[href*="/b/"]').forEach(function(btn){
+          try { btn.href = buildLink(btn.href); } catch(err) {}
+        });
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attach);
+      } else {
+        attach();
+      }
+      try {
+        new MutationObserver(attach).observe(document.documentElement, { childList: true, subtree: true });
+      } catch(e) {}
+      window.__sharkUtms = captured;
+    })();
+  </script>
+</head>
+<body>
+<main>
+  <h1>Duas figuras são iguais</h1>
+  <p class="sub">Clique nas duas figuras iguais para continuar.</p>
+  <div class="grid" id="grid"></div>
+  <div id="msg" role="status" aria-live="polite"></div>
+</main>
+
+<script>
+  // >>> TROQUE O LINK DE DESTINO AQUI <<<
+  const LINK_DESTINO = "https://phantoms.group/l/6d7f18c8";
+
+  const FIGURAS = {
+    estrela:  '<svg viewBox="0 0 100 100"><polygon points="50,8 61,38 93,38 67,57 77,89 50,70 23,89 33,57 7,38 39,38" fill="#f4b400"/></svg>',
+    coracao:  '<svg viewBox="0 0 100 100"><path d="M50 88 C10 58 6 28 28 20 C40 16 48 24 50 30 C52 24 60 16 72 20 C94 28 90 58 50 88Z" fill="#d9453b"/></svg>',
+    circulo:  '<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="#2f7fd1"/></svg>',
+    triangulo:'<svg viewBox="0 0 100 100"><polygon points="50,10 92,86 8,86" fill="#2f9e6e"/></svg>'
+  };
+
+  // Junta as UTMs/parâmetros capturados pelo script do <head> ao link de destino
+  function linkComUtms(href){
+    try {
+      const url = new URL(href, location.origin);
+      const params = window.__sharkUtms || {};
+      Object.keys(params).forEach(k => {
+        if (!url.searchParams.has(k)) url.searchParams.set(k, params[k]);
+      });
+      return url.toString();
+    } catch(e) {
+      return href;
+    }
+  }
+
+  const grid = document.getElementById("grid");
+  const msg  = document.getElementById("msg");
+  let selecionadas = [];
+  let travado = false;
+
+  function embaralhar(a){
+    for(let i=a.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function iniciar(){
+    grid.innerHTML = ""; msg.textContent = ""; msg.style.color = "";
+    selecionadas = []; travado = false;
+
+    // sorteia 3 tipos diferentes; um deles aparece duas vezes
+    const tipos = embaralhar(Object.keys(FIGURAS)).slice(0,3);
+    const lista = embaralhar([tipos[0], tipos[0], tipos[1], tipos[2]]);
+
+    lista.forEach((tipo, i) => {
+      const b = document.createElement("button");
+      b.className = "card";
+      b.type = "button";
+      b.dataset.tipo = tipo;
+      b.setAttribute("aria-label", "Figura " + (i+1));
+      b.innerHTML = FIGURAS[tipo];
+      b.addEventListener("click", () => clicar(b));
+      grid.appendChild(b);
+    });
+  }
+
+  function clicar(b){
+    if(travado || b.classList.contains("sel")) return;
+    b.classList.add("sel");
+    selecionadas.push(b);
+    if(selecionadas.length < 2) return;
+
+    travado = true;
+    const [a, c] = selecionadas;
+    if(a.dataset.tipo === c.dataset.tipo){
+      a.classList.add("ok"); c.classList.add("ok");
+      msg.style.color = "#7be0ae";
+      msg.textContent = "Isso! Redirecionando...";
+      setTimeout(() => { window.location.href = linkComUtms(LINK_DESTINO); }, 900);
+    } else {
+      a.classList.add("err"); c.classList.add("err");
+      msg.style.color = "#ff8d85";
+      msg.textContent = "Essas são diferentes. Tente de novo.";
+      setTimeout(iniciar, 1000);
+    }
+  }
+
+  iniciar();
+</script>
+</body>
+</html>
